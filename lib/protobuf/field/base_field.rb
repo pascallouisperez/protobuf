@@ -99,6 +99,14 @@ module Protobuf
         false
       end
 
+      def oneof?
+        options.key?(:oneof)
+      end
+
+      def oneof_name
+        options[:oneof]
+      end
+
       def optional?
         rule == :optional
       end
@@ -207,6 +215,7 @@ module Protobuf
             if val.nil? || (val.respond_to?(:empty?) && val.empty?)
               @values.delete(field.name)
             else
+              clear_oneof_group(field.oneof_name) if field.oneof?
               @values[field.name] ||= ::Protobuf::Field::FieldArray.new(field)
               @values[field.name].replace(val)
             end
@@ -238,7 +247,9 @@ module Protobuf
             if val.nil? || (val.respond_to?(:empty?) && val.empty?)
               @values.delete(field.name)
             elsif field.acceptable?(val)
-              @values[field.name] = field.coerce!(val)
+              coerced_value = field.coerce!(val)
+              clear_oneof_group(field.oneof_name) if field.oneof?
+              @values[field.name] = coerced_value
             else
               fail TypeError, "Unacceptable value #{val} for field #{field.name} of type #{field.type_class}"
             end

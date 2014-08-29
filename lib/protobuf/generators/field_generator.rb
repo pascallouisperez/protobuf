@@ -17,10 +17,28 @@ module Protobuf
       ##
       # Attributes
       #
-      attr_reader :field_options
+      attr_reader :field_options, :oneof_descriptors
 
+      ##
+      # Constructor
+      #
+      def initialize(descriptor, oneof_descriptors = [], indent_level = 0, options = {})
+        super(descriptor, indent_level, options)
+        @oneof_descriptors = oneof_descriptors
+      end
+
+      ##
+      # Public Instance Methods
+      #
       def applicable_options
         @applicable_options ||= field_options.map { |k, v| ":#{k} => #{v}" }
+      end
+
+      def compile
+        run_once(:compile) do
+          field_definition = [ "#{label} #{type_name}", name, number, applicable_options ]
+          puts field_definition.flatten.compact.join(', ')
+        end
       end
 
       def default_value
@@ -59,6 +77,18 @@ module Protobuf
         end
       end
 
+      def field_options
+        @field_options ||= begin
+                             opts = {}
+                             opts[:default] = default_value if defaulted?
+                             opts[:packed] = 'true' if packed?
+                             opts[:deprecated] = 'true' if deprecated?
+                             opts[:extension] = 'true' if extension?
+                             opts[:oneof] = oneof_name if oneof?
+                             opts
+                           end
+      end
+
       def label
         @label ||= descriptor.label.name.to_s.downcase.sub(/label_/, '') # required, optional, repeated
       end
@@ -71,15 +101,12 @@ module Protobuf
         @number ||= descriptor.number
       end
 
-      def field_options
-        @field_options ||= begin
-                             opts = {}
-                             opts[:default] = default_value if defaulted?
-                             opts[:packed] = 'true' if packed?
-                             opts[:deprecated] = 'true' if deprecated?
-                             opts[:extension] = 'true' if extension?
-                             opts
-                           end
+      def oneof?
+        ! descriptor.oneof_index!.nil?
+      end
+
+      def oneof_name
+        ":#{oneof_descriptors[descriptor.oneof_index].name}"
       end
 
       def packed?

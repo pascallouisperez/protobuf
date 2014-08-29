@@ -2,6 +2,7 @@ require 'protobuf/generators/enum_generator'
 require 'protobuf/generators/extension_generator'
 require 'protobuf/generators/field_generator'
 require 'protobuf/generators/message_generator'
+require 'protobuf/generators/oneof_generator'
 require 'protobuf/generators/service_generator'
 
 module Protobuf
@@ -38,9 +39,9 @@ module Protobuf
         end
       end
 
-      def add_extension_fields(field_descriptors)
+      def add_extension_fields(field_descriptors, oneof_descriptors)
         field_descriptors.each do |field_descriptor|
-          @groups[:extension_field] << FieldGenerator.new(field_descriptor, indent_level)
+          @groups[:extension_field] << FieldGenerator.new(field_descriptor, oneof_descriptors, indent_level)
         end
       end
 
@@ -59,15 +60,21 @@ module Protobuf
         end
       end
 
-      def add_message_fields(field_descriptors)
+      def add_message_fields(field_descriptors, oneof_descriptors)
         field_descriptors.each do |field_descriptor|
-          @groups[:field] << FieldGenerator.new(field_descriptor, indent_level)
+          @groups[:field] << FieldGenerator.new(field_descriptor, oneof_descriptors, indent_level)
         end
       end
 
       def add_messages(descriptors, options = {})
         descriptors.each do |descriptor|
           @groups[:message] << MessageGenerator.new(descriptor, indent_level, options)
+        end
+      end
+
+      def add_oneof_names(descriptor)
+        unless descriptor.oneof_decl.empty?
+          @groups[:oneof_descriptors] << OneofGenerator.new(descriptor, indent_level)
         end
       end
 

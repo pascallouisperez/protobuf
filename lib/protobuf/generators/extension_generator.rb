@@ -15,8 +15,8 @@ module Protobuf
         run_once(:compile) do
           print_class(@message_type, :message) do
             group = GroupGenerator.new(current_indent)
-            group.add_extension_fields(@field_descriptors)
-            group.order = [:extension_field]
+            group.add_extension_fields(@field_descriptors, [])
+            group.order = [ :extension_field ]
             print group.to_s
           end
         end

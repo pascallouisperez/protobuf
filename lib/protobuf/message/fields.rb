@@ -47,13 +47,39 @@ module Protobuf
           extension_ranges << range
         end
 
+        # Set a list of oneof field group names
+        def set_oneof_names(*names)
+          names.each do |name|
+            oneof_names << name
+          end
+        end
+
         ##
         # Field Access Methods
         #
         def all_fields
           @all_fields ||= field_store.values.uniq.sort_by(&:tag)
         end
-
+  
+        def extension_fields
+          @extension_fields ||= all_fields.select(&:extension?)
+        end
+  
+        def define_field(rule, type_class, field_name, tag, options)
+          raise_if_tag_collision(tag, field_name)
+          raise_if_name_collision(field_name)
+  
+          field = ::Protobuf::Field.build(self, rule, type_class, field_name, tag, options)
+          field_store[field_name] = field
+          field_store[tag] = field
+  
+          class_eval(<<-RAW_GETTER, __FILE__, __LINE__ + 1)
+            define_method("#{field_name}!") do
+              @values[:#{field_name}]
+            end
+          RAW_GETTER
+        end
+  
         def extension_fields
           @extension_fields ||= all_fields.select(&:extension?)
         end
@@ -106,6 +132,14 @@ module Protobuf
           define_method("#{field_name}!") do
             @values[field_name]
           end
+        end
+
+        def oneof_fields
+          all_fields.select(&:oneof?)
+        end
+
+        def oneof_names
+          @oneof_names ||= []
         end
 
         def raise_if_tag_collision(tag, field_name)
